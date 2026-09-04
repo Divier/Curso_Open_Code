@@ -18,3 +18,6 @@ Static single-page HTML site (demo/learning project). No build tools, package ma
 
 - Language: Spanish readme, English HTML content
 - Keep changes minimal and self-contained in `index.html`
+
+## Reglas de estilos
+- Para más información sobre las reglas de estilo, puedes dirigirte aquí: @style-guide.md 
