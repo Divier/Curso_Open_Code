@@ -1,6 +1,6 @@
 # SPEC 01 — Cuatro fantasmas con personalidad clásica
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** Ninguno
 > **Fecha:** 2026-09-21
 > **Objetivo:** Sustituir los dos fantasmas genéricos actuales por los cuatro fantasmas clásicos del arcade, cada uno con conducta propia, siendo Blinky el perseguidor agresivo de Pac-Man.

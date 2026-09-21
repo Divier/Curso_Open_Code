@@ -13,6 +13,12 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 
+// Personalidades clasicas: constantes de los destinos de orientacion.
+const AMBUSH_AHEAD = 4;                // celdas delante de Pac-Man para pinky
+const FLANK_AHEAD = 2;                 // celdas delante para el vector de inky
+const CLYDE_RANGE = 8;                 // distancia Manhattan que activa la timidez
+const CLYDE_CORNER = { x: 0, y: 30 };  // esquina inferior-izquierda de clyde
+
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
 function createGame() {
@@ -110,35 +116,66 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
-function decideGhost( game, g ) {
-  const grid = game.grid;
-  const p = game.pacman;
-
+// Eleccion greedy: de las direcciones validas desde la celda del fantasma
+// (sin invertir la actual, salvo callejon) devuelve la que minimiza la
+// distancia Manhattan al destino. El destino solo orienta; nunca se viaja a el.
+function chooseGreedy( grid, g, target ) {
   const options = Object.keys( DIRS ).filter(
     ( dir ) => dir !== OPPOSITE[ g.dir ] && canMove( grid, g.x, g.y, dir, 'ghost' )
   );
   // Sin salida (callejon): permitir el giro de 180.
   const choices = options.length ? options : [ '' + OPPOSITE[ g.dir ] ];
 
-  if ( g.kind === 'hunter' ) {
-    const px = Math.round( p.x );
-    const py = Math.round( p.y );
-    let best = choices[ 0 ];
-    let bestDist = Infinity;
-    for ( const dir of choices ) {
-      const d = DIRS[ dir ];
-      const nx = g.x + d.x;
-      const ny = g.y + d.y;
-      const dist = Math.abs( nx - px ) + Math.abs( ny - py );
-      if ( dist < bestDist ) {
-        bestDist = dist;
-        best = dir;
-      }
+  let best = choices[ 0 ];
+  let bestDist = Infinity;
+  for ( const dir of choices ) {
+    const d = DIRS[ dir ];
+    const nx = g.x + d.x;
+    const ny = g.y + d.y;
+    const dist = Math.abs( nx - target.x ) + Math.abs( ny - target.y );
+    if ( dist < bestDist ) {
+      bestDist = dist;
+      best = dir;
     }
-    g.dir = best;
-  } else {
-    g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
   }
+  return best;
+}
+
+// Destino de orientacion por personalidad. Puede caer fuera del laberinto
+// (tuneles, esquinas): solo orienta la eleccion greedy; nunca se viaja a el
+// ni se indexa la parrilla con el.
+function ghostTarget( game, g ) {
+  const p = game.pacman;
+  const px = Math.round( p.x );
+  const py = Math.round( p.y );
+
+  if ( g.kind === 'blinky' ) {
+    // Persecucion directa agresiva: la celda de Pac-Man.
+    return { x: px, y: py };
+  }
+  if ( g.kind === 'pinky' ) {
+    // Emboscada: AMBUSH_AHEAD celdas delante de Pac-Man segun su dir.
+    const d = DIRS[ p.dir ];
+    return { x: px + d.x * AMBUSH_AHEAD, y: py + d.y * AMBUSH_AHEAD };
+  }
+  if ( g.kind === 'inky' ) {
+    // Flanqueo: FLANK_AHEAD celdas delante de Pac-Man, duplicando el vector
+    // desde blinky (buscado por kind, no por indice).
+    const d = DIRS[ p.dir ];
+    const ax = px + d.x * FLANK_AHEAD;
+    const ay = py + d.y * FLANK_AHEAD;
+    const blinky = game.ghosts.find( ( o ) => o.kind === 'blinky' );
+    return { x: 2 * ax - Math.round( blinky.x ), y: 2 * ay - Math.round( blinky.y ) };
+  }
+  // clyde: timido — persigue de lejos, se retira a su esquina si Pac-Man
+  // queda a menos de CLYDE_RANGE casillas (Manhattan).
+  const dist = Math.abs( g.x - px ) + Math.abs( g.y - py );
+  return dist < CLYDE_RANGE ? CLYDE_CORNER : { x: px, y: py };
+}
+
+function decideGhost( game, g ) {
+  // Las cuatro personalidades resuelven un destino y eligen greedy hacia el.
+  g.dir = chooseGreedy( game.grid, g, ghostTarget( game, g ) );
 }
 
 function moveGhost( game, g ) {
