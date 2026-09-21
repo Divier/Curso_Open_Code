@@ -58,7 +58,14 @@ const GHOST_STARTS = [
   { x: 15, y: 14, kind: 'clyde' }, // dentro de la pen
 ];
 
+const PEN_AREA = { x0: 11, x1: 16, y0: 12, y1: 15 }; // jaula: interior filas 13-15 + puerta fila 12
+const PEN_DOOR_COLS = [ 13, 14 ]; // columnas de la puerta (fila 12)
+const PEN_EXIT_ROW = 11;          // fila transitable justo sobre la puerta
+
 window.MAZE = MAZE;
 window.TUNNEL_ROW = TUNNEL_ROW;
 window.PACMAN_START = PACMAN_START;
 window.GHOST_STARTS = GHOST_STARTS;
+window.PEN_AREA = PEN_AREA;
+window.PEN_DOOR_COLS = PEN_DOOR_COLS;
+window.PEN_EXIT_ROW = PEN_EXIT_ROW;

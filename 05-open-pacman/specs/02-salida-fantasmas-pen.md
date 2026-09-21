@@ -1,6 +1,6 @@
 # SPEC 02 — Salida de los fantasmas de la pen
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 01
 > **Fecha:** 2026-09-21
 > **Objetivo:** Garantizar que los fantasmas salgan de la pen caminando por la puerta nada más empezar a moverse (arranque y resets por colisión) y que no puedan re-entrar una vez fuera.

@@ -1,6 +1,6 @@
 // game.js
 // Estado y reglas. Depende de globals de maze.js: MAZE, TUNNEL_ROW,
-// PACMAN_START, GHOST_STARTS.
+// PACMAN_START, GHOST_STARTS, PEN_AREA, PEN_DOOR_COLS, PEN_EXIT_ROW.
 
 const DIRS = {
   left: { x: -1, y: 0 },
@@ -76,6 +76,9 @@ function canMove( grid, x, y, dir, actor ) {
   const ty = y + d.y;
   // Tunel: salir por un borde en la fila del tunel siempre es valido.
   if ( ty === TUNNEL_ROW && ( tx < 0 || tx >= grid[ 0 ].length ) ) return true;
+  // Puerta unidireccional (SPEC 02): un fantasma fuera de la pen no puede
+  // moverse a una celda de la pen; pen->fuera y pen->pen siguen permitidos.
+  if ( actor === 'ghost' && isPenCell( tx, ty ) && !isPenCell( x, y ) ) return false;
   return !isWall( grid, tx, ty, actor );
 }
 
@@ -173,7 +176,30 @@ function ghostTarget( game, g ) {
   return dist < CLYDE_RANGE ? CLYDE_CORNER : { x: px, y: py };
 }
 
+// Cae la celda (x,y) dentro de la pen (interior mas puerta)? Geometria de
+// maze.js: PEN_AREA.
+function isPenCell( x, y ) {
+  return x >= PEN_AREA.x0 && x <= PEN_AREA.x1 && y >= PEN_AREA.y0 && y <= PEN_AREA.y1;
+}
+
+// Destino de salida de la pen: fila sobre la puerta (PEN_EXIT_ROW), en la
+// columna de puerta (PEN_DOOR_COLS) mas cercana a la posicion del fantasma.
+function penExitTarget( g ) {
+  const x = Math.round( g.x );
+  let best = PEN_DOOR_COLS[ 0 ];
+  for ( const col of PEN_DOOR_COLS ) {
+    if ( Math.abs( col - x ) < Math.abs( best - x ) ) best = col;
+  }
+  return { x: best, y: PEN_EXIT_ROW };
+}
+
 function decideGhost( game, g ) {
+  // Modo salida (SPEC 02): dentro de la pen el destino de orientacion es la
+  // celda sobre la puerta; la personalidad se retoma al pisar el mapa.
+  if ( isPenCell( g.x, g.y ) ) {
+    g.dir = chooseGreedy( game.grid, g, penExitTarget( g ) );
+    return;
+  }
   // Las cuatro personalidades resuelven un destino y eligen greedy hacia el.
   g.dir = chooseGreedy( game.grid, g, ghostTarget( game, g ) );
 }
