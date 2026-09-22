@@ -98,8 +98,10 @@ function drawPacman( ctx, p, frame ) {
   ctx.fill();
 }
 
-function drawGhost( ctx, g, color ) {
-  const { cx, cy } = cellCenter( g.x, g.y );
+function drawGhost( ctx, g, color, frame ) {
+  const { cx, cy: baseCy } = cellCenter( g.x, g.y );
+  // Rebote visual de espera (SPEC 03): bob vertical mientras waitFrames > 0.
+  const cy = baseCy + ( g.waitFrames > 0 ? Math.sin( frame * 0.15 ) * 3 : 0 );
   const r = TILE / 2 - 1;
   const top = cy - r;
   const bottom = cy + r;
@@ -164,7 +166,7 @@ function draw( ctx, game, frame ) {
   drawDoor( ctx, grid );
   drawDots( ctx, grid );
   drawPacman( ctx, game.pacman, frame );
-  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ] || '#ff0000' ) );
+  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ] || '#ff0000', frame ) );
   drawHUD( ctx, game, W );
 }
 

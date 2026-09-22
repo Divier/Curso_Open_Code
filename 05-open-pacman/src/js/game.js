@@ -19,6 +19,14 @@ const FLANK_AHEAD = 2;                 // celdas delante para el vector de inky
 const CLYDE_RANGE = 8;                 // distancia Manhattan que activa la timidez
 const CLYDE_CORNER = { x: 0, y: 30 };  // esquina inferior-izquierda de clyde
 
+// Salida escalonada de la pen (SPEC 03): retardo por kind, en frames (~60 fps).
+const GHOST_RELEASE_FRAMES = {
+  blinky: 0,    // sale de inmediato
+  pinky: 60,    // ~1 s
+  inky: 180,    // ~3 s
+  clyde: 360,   // ~6 s
+};
+
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
 function createGame() {
@@ -48,6 +56,7 @@ function createGame() {
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      waitFrames: GHOST_RELEASE_FRAMES[ g.kind ],
     } ) ),
   };
 }
@@ -205,6 +214,13 @@ function decideGhost( game, g ) {
 }
 
 function moveGhost( game, g ) {
+  // Gate de espera (SPEC 03): con cuenta atras pendiente el fantasma ni
+  // decide ni se mueve; al llegar a 0 retoma el flujo de salida de SPEC 02.
+  if ( g.waitFrames > 0 ) {
+    g.waitFrames--;
+    return;
+  }
+
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
@@ -231,6 +247,8 @@ function resetPositions( game ) {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    // Re-aplicar el retardo completo: el escalonado se repite tras cada colision.
+    g.waitFrames = GHOST_RELEASE_FRAMES[ g.kind ];
   } );
 }
 
