@@ -66,12 +66,23 @@ function drawDoor( ctx, grid ) {
   ctx.stroke();
 }
 
-function drawDots( ctx, grid ) {
+function drawDots( ctx, grid, frame ) {
   ctx.fillStyle = DOT_COLOR;
   for ( let y = 0; y < grid.length; y++ ) {
     for ( let x = 0; x < grid[ 0 ].length; x++ ) {
-      if ( grid[ y ][ x ] !== 2 ) continue;
+      const v = grid[ y ][ x ];
+      if ( v !== 2 && v !== 4 ) continue;
       const { cx, cy } = cellCenter( x, y );
+      // Power pellet (tile 4, SPEC 04): circulo mayor parpadeante,
+      // ~0.25 s por fase (15 frames visible / 15 oculto).
+      if ( v === 4 ) {
+        if ( Math.floor( frame / 15 ) % 2 === 0 ) {
+          ctx.beginPath();
+          ctx.arc( cx, cy, 6.5, 0, Math.PI * 2 );
+          ctx.fill();
+        }
+        continue;
+      }
       ctx.beginPath();
       ctx.arc( cx, cy, 2.5, 0, Math.PI * 2 );
       ctx.fill();
@@ -98,32 +109,13 @@ function drawPacman( ctx, p, frame ) {
   ctx.fill();
 }
 
-function drawGhost( ctx, g, color, frame ) {
-  const { cx, cy: baseCy } = cellCenter( g.x, g.y );
-  // Rebote visual de espera (SPEC 03): bob vertical mientras waitFrames > 0.
-  const cy = baseCy + ( g.waitFrames > 0 ? Math.sin( frame * 0.15 ) * 3 : 0 );
-  const r = TILE / 2 - 1;
-  const top = cy - r;
-  const bottom = cy + r;
-  const left = cx - r;
-  const right = cx + r;
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc( cx, cy - 1, r, Math.PI, 0, false ); // cabeza
-  ctx.lineTo( right, bottom );
-  // falda ondulada (3 picos)
-  ctx.lineTo( right - r * 0.66, bottom - 4 );
-  ctx.lineTo( cx, bottom );
-  ctx.lineTo( left + r * 0.66, bottom - 4 );
-  ctx.lineTo( left, bottom );
-  ctx.closePath();
-  ctx.fill();
-
-  // ojos mirando segun direccion
-  const dir = DIRS[ g.dir ] || { x: 0, y: 0 };
-  const ex = dir.x * 1.6;
-  const ey = dir.y * 1.6;
+// Ojos del fantasma (blanco con pupila azul) mirando segun direccion. Los
+// usan los fantasmas normales y, ellos solos, los ojos que vuelven a la pen
+// tras ser comidos (SPEC 04).
+function drawGhostEyes( ctx, cx, cy, dir ) {
+  const d = DIRS[ dir ] || { x: 0, y: 0 };
+  const ex = d.x * 1.6;
+  const ey = d.y * 1.6;
   for ( const off of [ -3.5, 3.5 ] ) {
     ctx.fillStyle = '#fff';
     ctx.beginPath();
@@ -136,6 +128,64 @@ function drawGhost( ctx, g, color, frame ) {
   }
 }
 
+function drawGhost( ctx, g, color, frame, aspect ) {
+  const { cx, cy: baseCy } = cellCenter( g.x, g.y );
+  // Rebote visual de espera (SPEC 03): bob vertical mientras waitFrames > 0.
+  const cy = baseCy + ( g.waitFrames > 0 ? Math.sin( frame * 0.15 ) * 3 : 0 );
+
+  // Par de ojos sin cuerpo (SPEC 04): el fantasma comido vuelve a la pen.
+  if ( aspect === 'eyes' ) {
+    drawGhostEyes( ctx, cx, cy, g.dir );
+    return;
+  }
+
+  const r = TILE / 2 - 1;
+  const top = cy - r;
+  const bottom = cy + r;
+  const left = cx - r;
+  const right = cx + r;
+
+  // Aspecto asustado (SPEC 04): azul, o blanco alternante en el aviso final.
+  const look = FRIGHT_LOOK[ aspect ];
+  ctx.fillStyle = look ? look.body : color;
+  ctx.beginPath();
+  ctx.arc( cx, cy - 1, r, Math.PI, 0, false ); // cabeza
+  ctx.lineTo( right, bottom );
+  // falda ondulada (3 picos)
+  ctx.lineTo( right - r * 0.66, bottom - 4 );
+  ctx.lineTo( cx, bottom );
+  ctx.lineTo( left + r * 0.66, bottom - 4 );
+  ctx.lineTo( left, bottom );
+  ctx.closePath();
+  ctx.fill();
+
+  // Cara de susto (SPEC 04): ojos puntitos sin pupila y boca en zigzag.
+  if ( look ) {
+    ctx.fillStyle = look.face;
+    for ( const off of [ -3.5, 3.5 ] ) {
+      ctx.beginPath();
+      ctx.arc( cx + off, cy - 2, 2.2, 0, Math.PI * 2 );
+      ctx.fill();
+    }
+    ctx.strokeStyle = look.face;
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo( cx - 6, cy + 5 );
+    ctx.lineTo( cx - 4, cy + 2.5 );
+    ctx.lineTo( cx - 2, cy + 5 );
+    ctx.lineTo( cx, cy + 2.5 );
+    ctx.lineTo( cx + 2, cy + 5 );
+    ctx.lineTo( cx + 4, cy + 2.5 );
+    ctx.lineTo( cx + 6, cy + 5 );
+    ctx.stroke();
+    return;
+  }
+
+  // ojos mirando segun direccion
+  drawGhostEyes( ctx, cx, cy, g.dir );
+}
+
 function drawHUD( ctx, game, W ) {
   ctx.fillStyle = '#fff';
   ctx.font = '14px "Courier New", monospace';
@@ -146,6 +196,17 @@ function drawHUD( ctx, game, W ) {
   ctx.fillText( 'VIDAS ' + game.lives, W * TILE - 8, 4 );
 }
 
+// Cifra de puntos del fantasma comido (SPEC 04): pintada en el lugar exacto
+// donde estaba el fantasma mientras dura el congelado (~0.5 s).
+function drawPopup( ctx, popup ) {
+  const { cx, cy } = cellCenter( popup.x, popup.y );
+  ctx.fillStyle = '#00ffff';
+  ctx.font = 'bold 12px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText( '' + popup.points, cx, cy );
+}
+
 // Color por personalidad (kind), no por indice.
 const GHOST_COLORS = {
   blinky: '#ff0000', // rojo
@@ -153,6 +214,25 @@ const GHOST_COLORS = {
   inky: '#00ffff',   // cian
   clyde: '#ffb852',  // naranja
 };
+
+// Aspecto asustado (SPEC 04): azul con cara de susto; en el aviso final
+// (ultimos FRIGHT_WARN_FRAMES, global de game.js) alterna azul/blanco.
+const FRIGHT_LOOK = {
+  fright: { body: '#2121de', face: '#ffffff' }, // azul + cara blanca
+  flash: { body: '#ffffff', face: '#ff0000' },  // blanco + cara roja
+};
+
+// Resuelve el aspecto de un fantasma: 'eyes' (comido: solo ojos, predomina
+// sobre todo), 'normal' (color por kind), 'fright' (azul) o 'flash' (blanco,
+// fases impares del aviso). Un exempt (revivido en este modo) nunca se azula.
+function ghostAspect( game, g, frame ) {
+  if ( g.eaten ) return 'eyes';
+  if ( game.frightenedFrames <= 0 || g.exempt ) return 'normal';
+  if ( game.frightenedFrames <= FRIGHT_WARN_FRAMES && Math.floor( frame / 15 ) % 2 === 1 ) {
+    return 'flash';
+  }
+  return 'fright';
+}
 
 function draw( ctx, game, frame ) {
   const grid = game.grid;
@@ -164,9 +244,16 @@ function draw( ctx, game, frame ) {
 
   drawWalls( ctx, grid );
   drawDoor( ctx, grid );
-  drawDots( ctx, grid );
+  drawDots( ctx, grid, frame );
   drawPacman( ctx, game.pacman, frame );
-  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ] || '#ff0000', frame ) );
+  game.ghosts.forEach( ( g ) => {
+    // Congelado (SPEC 04): el fantasma recien comido se esconde; su cifra
+    // se pinta en su lugar mientras dura el congelado.
+    if ( game.freezeFrames > 0 && game.popup && g.eaten &&
+         g.x === game.popup.x && g.y === game.popup.y ) return;
+    drawGhost( ctx, g, GHOST_COLORS[ g.kind ] || '#ff0000', frame, ghostAspect( game, g, frame ) );
+  } );
+  if ( game.popup && game.freezeFrames > 0 ) drawPopup( ctx, game.popup );
   drawHUD( ctx, game, W );
 }
 
