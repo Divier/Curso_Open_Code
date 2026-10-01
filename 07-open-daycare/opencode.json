@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": [
+        "/Users/strider/.nvm/versions/node/v22.20.0/bin/npx",
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "enabled": true,
+      "environment": {
+        "PATH": "/Users/strider/.nvm/versions/node/v22.20.0/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}
