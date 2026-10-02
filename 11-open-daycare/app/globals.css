@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-canvas: #f6ecdf;
+  --color-ink: #3f362e;
+  --color-card: #fffdf9;
+  --color-line: #ece0d0;
+  --color-accent: #d9583c;
+  --color-accent-soft: #f2937a;
+  --color-accent-warm: #ee8164;
+  --color-staff: #2e89a6;
+  --color-staff-deep: #1f7a93;
+  --color-achievement: #3e9b6c;
+  --color-announcement: #4e72c8;
+  --color-muted: #a89a8b;
+  --color-soft: #fbe3d8;
+  --color-allergy-warm: #fbd8cc;
+  --color-allergy-pink: #f9d2de;
+  --color-parent-active: #cfebd8;
+  --color-parent-pending: #f7e7a6;
+  --color-canvas-warm: #fbf4ec;
+  --color-accent-start: #f6a98e;
+  --color-accent-end: #ec7e62;
+  --color-btn-gradient: #f4977e;
+  --color-link: #c5503a;
+  --color-text-muted: #94887b;
+  --color-text-secondary: #6e6359;
+  --color-input-border: #eadfd0;
+  --color-placeholder: #b6a99b;
+  --color-logo-gradient: #f8c3a8;
+  --color-avatar-blue: #a9d9e8;
+  --color-checkbox-green: #5fb97e;
+  --color-checkbox-text: #8a7234;
+  --color-checkbox-bg: #fbf1d6;
+  --color-newpost-meal: #9a7b1e;
+  --color-newpost-nap-bg: #e7dcf6;
+  --color-newpost-nap-text: #7b5fc0;
+  --color-newpost-mood-text: #c56486;
+  --color-newpost-photo-text: #d9684a;
+  --color-newpost-announcement-bg: #ccd8f4;
+}
+
+@theme inline {
+  --font-head: var(--font-fredoka);
+  --font-body: var(--font-nunito);
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-nunito), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Kid card hover effect */
+.kid-card-hover:hover {
+  transform: translateY(-2px);
+}
+
+/* Hide scrollbar for image carousel */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
